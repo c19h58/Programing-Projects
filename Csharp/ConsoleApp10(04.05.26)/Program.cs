@@ -3,11 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace SmartHomeHub
 {
-    // ================= ЧАСТЬ 1: Паттерн Command =================
-
-    /// <summary>
-    /// Интерфейс команды
-    /// </summary>
+  
     public interface ICommand
     {
         void Execute();
@@ -55,20 +51,14 @@ namespace SmartHomeHub
         public void Execute() => _device.SetTemperature(_temperature);
     }
 
-    // ================= ЧАСТЬ 2: Chain of Responsibility =================
 
-    /// <summary>
-    /// Объект запроса, передаваемый по цепочке
-    /// </summary>
     public class Request
     {
         public required string Text { get; set; }
         public required string Token { get; set; }
     }
 
-    /// <summary>
-    /// Базовый обработчик цепочки
-    /// </summary>
+   
     public abstract class Handler
     {
         protected Handler? _nextHandler;
@@ -102,7 +92,7 @@ namespace SmartHomeHub
             if (request.Token != ValidToken)
             {
                 Console.WriteLine("🔒 [Security] Ошибка: Неверный токен доступа. Запрос отклонён.");
-                return; // Останавливаем цепочку
+                return; 
             }
             Console.WriteLine("✅ [Security] Токен проверен успешно.");
             _nextHandler?.Handle(request);
@@ -158,7 +148,7 @@ namespace SmartHomeHub
     {
         static void Main(string[] args)
         {
-            // Сборка цепочки: Logging -> Security -> Validation
+            
             var chain = new LoggingHandler();
             chain.SetNext(new SecurityHandler()).SetNext(new ValidationHandler());
 
