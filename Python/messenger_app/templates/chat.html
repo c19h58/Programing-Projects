@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Flask Messenger</title>
+    <!-- Подключаем Socket.io -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #messages { height: 300px; border: 1px solid #ccc; overflow-y: scroll; margin-bottom: 10px; padding: 10px; }
+        .msg-item { margin-bottom: 5px; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+    <h2>Мессенджер Никита</h2>
+    <div id="messages"></div>
+    
+    <input type="text" id="username" placeholder="Имя..." autocomplete="off"><br><br>
+    <input type="text" id="myMessage" placeholder="Введите сообщение..." style="width: 300px;">
+    <button id="sendBtn">Отправить</button>
+
+    <script>
+        $(document).ready(function() {
+            // Подключаемся к серверу
+            var socket = io();
+
+            // При получении сообщения от сервера добавляем его в список
+            socket.on('message', function(msg) {
+                $('#messages').append('<div class="msg-item">' + msg + '</div>');
+                $("#messages").scrollTop($("#messages")[0].scrollHeight);
+            });
+
+            // Отправка сообщения по нажатию кнопки
+            $('#sendBtn').on('click', function() {
+                var user = $('#username').val() || 'Аноним';
+                var text = $('#myMessage').val();
+                if (text) {
+                    socket.send(user + ': ' + text);
+                    $('#myMessage').val('');
+                }
+            });
+
+            // Отправка по Enter
+            $('#myMessage').keypress(function(e) {
+                if(e.which == 13) {
+                    $('#sendBtn').click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
