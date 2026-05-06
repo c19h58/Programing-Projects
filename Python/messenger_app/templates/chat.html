@@ -2,52 +2,103 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Flask Messenger</title>
-    <!-- Подключаем Socket.io -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мессенджер Никита</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="stylesheet" href="style.css">
     <style>
-        #messages { height: 300px; border: 1px solid #ccc; overflow-y: scroll; margin-bottom: 10px; padding: 10px; }
-        .msg-item { margin-bottom: 5px; border-bottom: 1px solid #eee; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        body { background-color: #0f0f0f; color: white; display: flex; height: 100vh; overflow: hidden; }
+
+        /* Боковая панель */
+        .sidebar { width: 350px; border-right: 1px solid #2c2c2c; display: flex; flex-direction: column; background: #1c1c1c; }
+        .sidebar-header { padding: 15px; font-weight: bold; font-size: 20px; border-bottom: 1px solid #2c2c2c; }
+        .user-item { padding: 12px 15px; display: flex; align-items: center; cursor: pointer; transition: 0.2s; text-decoration: none; color: white; }
+        .user-item:hover { background: #2b2b2b; }
+        .user-avatar { width: 50px; height: 50px; border-radius: 50%; background: #333; margin-right: 15px; display: flex; align-items: center; justify-content: center; }
+
+        /* Главное окно чата */
+        .main-chat { flex: 1; display: flex; flex-direction: column; background-image: url('https://i.redd.it/v0h7616468u61.png'); /* Типичный фон ТГ */ background-blend-mode: overlay; background-color: #0e0e0e; }
+        
+        /* Шапка как на твоем скриншоте IMG_3936.jpg */
+        .chat-header { height: 60px; background: #1c1c1c; display: flex; align-items: center; justify-content: center; padding: 0 20px; position: relative; }
+        .header-info { background: rgba(255, 255, 255, 0.08); padding: 5px 20px; border-radius: 20px; font-weight: 500; }
+        .header-avatar { position: absolute; right: 20px; width: 40px; height: 40px; border-radius: 50%; }
+
+        /* Сообщения */
+        #messages_list { flex: 1; overflow-y: auto; padding: 20px; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .message-bubble { max-width: 70%; padding: 8px 15px; border-radius: 15px; font-size: 15px; line-height: 1.4; position: relative; }
+        .my-msg { align-self: flex-end; background: #8774e1; color: white; border-bottom-right-radius: 5px; }
+        .other-msg { align-self: flex-start; background: #212121; color: white; border-bottom-left-radius: 5px; }
+
+        /* Поле ввода */
+        .input-area { padding: 15px; background: #1c1c1c; display: flex; gap: 10px; align-items: center; }
+        #message_input { flex: 1; background: #2b2b2b; border: none; padding: 12px 15px; border-radius: 10px; color: white; outline: none; }
+        #send_btn { background: none; border: none; color: #8774e1; font-weight: bold; cursor: pointer; font-size: 16px; }
     </style>
 </head>
 <body>
 
-    <h2>Мессенджер Никита</h2>
-    <div id="messages"></div>
-    
-    <input type="text" id="username" placeholder="Имя..." autocomplete="off"><br><br>
-    <input type="text" id="myMessage" placeholder="Введите сообщение..." style="width: 300px;">
-    <button id="sendBtn">Отправить</button>
+    <!-- Список чатов -->
+    <div class="sidebar">
+        <div class="sidebar-header">Никита</div>
+        {% for uid, user in other.items() %}
+        <a href="/chat/{{ uid }}" class="user-item">
+            <div class="user-avatar">
+                {% if user.is_deleted %} 👻 {% else %} {{ user.username[0] }} {% endif %}
+            </div>
+            <div>
+                <div style="font-weight: bold;">{{ user.username }}</div>
+                <div style="font-size: 13px; color: #aaa;">Последнее сообщение...</div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Окно чата -->
+    <div class="main-chat">
+        <div class="chat-header">
+            <div class="header-info">
+                {{ display_name }}
+            </div>
+            <img src="/static/{{ avatar }}" class="header-avatar">
+        </div>
+
+        <ul id="messages_list">
+            <!-- Сюда будут падать сообщения -->
+        </ul>
+
+        <div class="input-area">
+            <input type="text" id="message_input" placeholder="Написать сообщение..." autocomplete="off">
+            <button id="send_btn" onclick="sendMessage()">ОТПРАВИТЬ</button>
+        </div>
+    </div>
 
     <script>
-        $(document).ready(function() {
-            // Подключаемся к серверу
-            var socket = io();
+        var socket = io();
+        var myId = "{{ my_id }}";
 
-            // При получении сообщения от сервера добавляем его в список
-            socket.on('message', function(msg) {
-                $('#messages').append('<div class="msg-item">' + msg + '</div>');
-                $("#messages").scrollTop($("#messages")[0].scrollHeight);
-            });
+        function sendMessage() {
+            var input = document.getElementById("message_input");
+            if (input.value.trim() !== "") {
+                // Отправляем объект с текстом и ID отправителя
+                socket.send({text: input.value, sender: myId});
+                input.value = "";
+            }
+        }
 
-            // Отправка сообщения по нажатию кнопки
-            $('#sendBtn').on('click', function() {
-                var user = $('#username').val() || 'Аноним';
-                var text = $('#myMessage').val();
-                if (text) {
-                    socket.send(user + ': ' + text);
-                    $('#myMessage').val('');
-                }
-            });
+        socket.on('message', function(data) {
+            var list = document.getElementById('messages_list');
+            var item = document.createElement('li');
+            item.className = 'message-bubble ' + (data.sender == myId ? 'my-msg' : 'other-msg');
+            item.textContent = data.text;
+            list.appendChild(item);
+            list.scrollTop = list.scrollHeight;
+        });
 
-            // Отправка по Enter
-            $('#myMessage').keypress(function(e) {
-                if(e.which == 13) {
-                    $('#sendBtn').click();
-                }
-            });
+        // Отправка по Enter
+        document.getElementById("message_input").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") sendMessage();
         });
     </script>
 </body>
