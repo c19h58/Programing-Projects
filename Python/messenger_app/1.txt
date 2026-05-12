@@ -1,0 +1,57 @@
+from flask import Flask, render_template, abort, session, redirect, url_for
+from flask_socketio import SocketIO, send
+import random
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'super-secret-key' # Обязательно для работы сессий
+socketio = SocketIO(app)
+
+# Наш временный "склад" пользователей в памяти сервера
+TEMP_USERS = {
+    1: {"username": "Иван", "avatar_url": "avatar1.png", "is_deleted": False},
+    2: {"username": "Мария", "avatar_url": "avatar2.png", "is_deleted": False},
+    3: {"username": "Удалённый аккаунт", "avatar_url": "ghost_icon.png", "is_deleted": True},
+}
+
+@app.before_request
+def assign_temporary_id():
+    """Если у зашедшего нет ID, даем ему случайный"""
+    if 'my_id' not in session:
+        session['my_id'] = random.randint(1000, 9999)
+        # Можно даже добавить его в наш список, чтобы другие его "видели"
+        TEMP_USERS[session['my_id']] = {
+            "username": f"Guest_{session['my_id']}",
+            "avatar_url": "default.png",
+            "is_deleted": False
+        }
+
+@app.route('/')
+def index():
+    # Показываем список доступных чатов (всех, кроме себя)
+    others = {uid: info for uid, info in TEMP_USERS.items() if uid != session.get('my_id')}
+    return render_template('chat.html', users=others, my_id=session.get('my_id'))
+
+@app.route('/chat/<int:user_id>')
+def chat(user_id):
+    recipient = TEMP_USERS.get(user_id)
+
+    if not recipient:
+        abort(404)
+    
+    # Логика для "Удаленного аккаунта" (как в ТГ)
+    if recipient['is_deleted']:
+        display_name = "Удалённый аккаунт"
+        avatar = "ghost_icon.png"
+    else:
+        display_name = recipient['username']
+        avatar = recipient['avatar_url']
+
+    return render_template(
+        'chat.html', 
+        display_name=display_name, 
+        avatar=avatar,
+        recipient_id=user_id
+    )
+
+if __name__ == '__main__':
+    app.run(debug=True)
