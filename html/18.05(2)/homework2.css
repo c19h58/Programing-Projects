@@ -1,0 +1,23 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #f4f4f9;
+}
+
+.live-icon {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  cursor: pointer;
+  filter: grayscale(100%);
+  transform: scale(1);
+}
+
+.live-icon:hover {
+  filter: grayscale(0%);
+  transform: scale(1.4);
+  
+}
